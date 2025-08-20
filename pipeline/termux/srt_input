@@ -1,4 +1,4 @@
-srtsrc uri=srt://:4000?mode=caller !
+srtsrc uri=srt://localhost:8890?streamid=read:mystream !
 tsdemux !
 queue !
 identity name=v_delay signal-handoffs=TRUE !
