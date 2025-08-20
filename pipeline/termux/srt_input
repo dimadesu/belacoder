@@ -1,0 +1,7 @@
+srtsrc uri=srt://:4002?mode=caller !
+tsdemux !
+queue !
+identity name=v_delay signal-handoffs=TRUE !
+jpegenc quality=70 name=venc_kbps !
+multipartmux !
+appsink name=appsink
