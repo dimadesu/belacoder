@@ -1,7 +1,10 @@
 srtsrc uri=srt://localhost:8890?streamid=read:mystream !
-tsdemux !
+tsdemux name=demux
+
+demux. !
 queue !
+decodebin !
+videoconvert !
 identity name=v_delay signal-handoffs=TRUE !
 jpegenc quality=70 name=venc_kbps !
-multipartmux !
 appsink name=appsink
