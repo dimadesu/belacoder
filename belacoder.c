@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
+#include <getopt.h>
 
 #include <gst/gst.h>
 #include <gst/gstinfo.h>
@@ -590,8 +591,14 @@ int main(int argc, char** argv) {
     fprintf(stderr, "DEBUG: argv[%d]='%s'\n", i, argv[i]);
   }
 
+  // Reset getopt globals for safety
+  optind = 1;
+  opterr = 1;
+  optopt = 0;
+
+  fprintf(stderr, "DEBUG: Starting getopt loop...\n");
   while ((opt = getopt(argc, argv, "d:b:s:l:rv")) != -1) {
-    fprintf(stderr, "DEBUG: got option '%c'\n", opt);
+    fprintf(stderr, "DEBUG: got option '%c' (optind=%d)\n", opt, optind);
     switch (opt) {
       case 'b':
         bitrate_filename = optarg;
@@ -625,6 +632,7 @@ int main(int argc, char** argv) {
     }
   }
 
+  fprintf(stderr, "DEBUG: Finished getopt loop, final optind=%d\n", optind);
   fprintf(stderr, "DEBUG: optind=%d, argc=%d, FIXED_ARGS=%d\n", optind, argc, FIXED_ARGS);
   fprintf(stderr, "DEBUG: argc - optind = %d\n", argc - optind);
 
