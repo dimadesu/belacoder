@@ -1,4 +1,4 @@
-srtsrc uri=srt://:4002?mode=caller !
+srtsrc uri=srt://:4000?mode=caller !
 tsdemux !
 queue !
 identity name=v_delay signal-handoffs=TRUE !
