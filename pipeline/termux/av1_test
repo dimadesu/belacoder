@@ -1,0 +1,14 @@
+videotestsrc pattern=0 is-live=true !
+video/x-raw,width=320,height=240,framerate=10/1 !
+videoconvert !
+identity name=v_delay signal-handoffs=TRUE !
+av1enc cpu-used=8 end-usage=cbr target-bitrate=500 name=venc_kbps !
+webmmux name=mux !
+appsink name=appsink
+
+audiotestsrc is-live=true !
+audio/x-raw,rate=22050,channels=1 !
+audioconvert !
+identity name=a_delay signal-handoffs=TRUE !
+flacenc !
+mux.

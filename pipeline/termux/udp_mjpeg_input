@@ -1,0 +1,8 @@
+udpsrc uri=udp://127.0.0.1:4001 !
+multipartdemux !
+jpegdec !
+videoconvert !
+identity name=v_delay signal-handoffs=TRUE !
+jpegenc quality=50 name=venc_kbps !
+multipartmux !
+appsink name=appsink
