@@ -595,98 +595,123 @@ int main(int argc, char** argv) {
   opterr = 1;
   optopt = 0;
 
-  fprintf(stderr, "DEBUG: Starting getopt loop...\n");
+  fprintf(stderr, "DEBUG: Starting argument parsing...\n");
   
   // Manual argument parsing for Termux compatibility
-  int arg_index = 1;
-  while (arg_index < argc && argv[arg_index][0] == '-') {
-    char *arg = argv[arg_index];
-    fprintf(stderr, "DEBUG: Processing argument: %s\n", arg);
+  // Scan all arguments looking for options
+  int non_option_count = 0;
+  for (int i = 1; i < argc; i++) {
+    char *arg = argv[i];
+    fprintf(stderr, "DEBUG: Processing argument %d: %s\n", i, arg);
     
-    if (strcmp(arg, "-r") == 0) {
-      fprintf(stderr, "DEBUG: Found -r option\n");
-      srt_pkt_size = REDUCED_SRT_PKT_SIZE;
-      arg_index++;
-    } else if (strcmp(arg, "-v") == 0) {
-      printf(VERSION "\n");
-      exit(EXIT_SUCCESS);
-    } else if (strncmp(arg, "-d", 2) == 0) {
-      char *delay_str = NULL;
-      if (strlen(arg) > 2) {
-        delay_str = arg + 2;  // -d500
-      } else if (arg_index + 1 < argc) {
-        delay_str = argv[++arg_index];  // -d 500
+    if (arg[0] == '-') {
+      // This is an option
+      if (strcmp(arg, "-r") == 0) {
+        fprintf(stderr, "DEBUG: Found -r option\n");
+        srt_pkt_size = REDUCED_SRT_PKT_SIZE;
+      } else if (strcmp(arg, "-v") == 0) {
+        printf(VERSION "\n");
+        exit(EXIT_SUCCESS);
+      } else if (strncmp(arg, "-d", 2) == 0) {
+        char *delay_str = NULL;
+        if (strlen(arg) > 2) {
+          delay_str = arg + 2;  // -d500
+        } else if (i + 1 < argc) {
+          delay_str = argv[++i];  // -d 500
+        } else {
+          fprintf(stderr, "Option -d requires an argument\n");
+          exit_syntax();
+        }
+        av_delay = strtol(delay_str, NULL, 10);
+        if (av_delay < -MAX_AV_DELAY || av_delay > MAX_AV_DELAY) {
+          fprintf(stderr, "Maximum sound delay +/- %d\n\n", MAX_AV_DELAY);
+          exit_syntax();
+        }
+      } else if (strncmp(arg, "-s", 2) == 0) {
+        if (strlen(arg) > 2) {
+          stream_id = arg + 2;  // -sstream
+        } else if (i + 1 < argc) {
+          stream_id = argv[++i];  // -s stream
+        } else {
+          fprintf(stderr, "Option -s requires an argument\n");
+          exit_syntax();
+        }
+      } else if (strncmp(arg, "-l", 2) == 0) {
+        char *latency_str = NULL;
+        if (strlen(arg) > 2) {
+          latency_str = arg + 2;  // -l2000
+        } else if (i + 1 < argc) {
+          latency_str = argv[++i];  // -l 2000
+        } else {
+          fprintf(stderr, "Option -l requires an argument\n");
+          exit_syntax();
+        }
+        srt_latency = strtol(latency_str, NULL, 10);
+        if (srt_latency < MIN_SRT_LATENCY || srt_latency > MAX_SRT_LATENCY) {
+          fprintf(stderr, "The SRT latency must be between %d and %d ms\n\n",
+                  MIN_SRT_LATENCY, MAX_SRT_LATENCY);
+          exit_syntax();
+        }
+      } else if (strncmp(arg, "-b", 2) == 0) {
+        if (strlen(arg) > 2) {
+          bitrate_filename = arg + 2;  // -bfile
+        } else if (i + 1 < argc) {
+          bitrate_filename = argv[++i];  // -b file
+        } else {
+          fprintf(stderr, "Option -b requires an argument\n");
+          exit_syntax();
+        }
       } else {
-        fprintf(stderr, "Option -d requires an argument\n");
+        fprintf(stderr, "Unknown option: %s\n", arg);
         exit_syntax();
       }
-      av_delay = strtol(delay_str, NULL, 10);
-      if (av_delay < -MAX_AV_DELAY || av_delay > MAX_AV_DELAY) {
-        fprintf(stderr, "Maximum sound delay +/- %d\n\n", MAX_AV_DELAY);
-        exit_syntax();
-      }
-      arg_index++;
-    } else if (strncmp(arg, "-s", 2) == 0) {
-      if (strlen(arg) > 2) {
-        stream_id = arg + 2;  // -sstream
-      } else if (arg_index + 1 < argc) {
-        stream_id = argv[++arg_index];  // -s stream
-      } else {
-        fprintf(stderr, "Option -s requires an argument\n");
-        exit_syntax();
-      }
-      arg_index++;
-    } else if (strncmp(arg, "-l", 2) == 0) {
-      char *latency_str = NULL;
-      if (strlen(arg) > 2) {
-        latency_str = arg + 2;  // -l2000
-      } else if (arg_index + 1 < argc) {
-        latency_str = argv[++arg_index];  // -l 2000
-      } else {
-        fprintf(stderr, "Option -l requires an argument\n");
-        exit_syntax();
-      }
-      srt_latency = strtol(latency_str, NULL, 10);
-      if (srt_latency < MIN_SRT_LATENCY || srt_latency > MAX_SRT_LATENCY) {
-        fprintf(stderr, "The SRT latency must be between %d and %d ms\n\n",
-                MIN_SRT_LATENCY, MAX_SRT_LATENCY);
-        exit_syntax();
-      }
-      arg_index++;
-    } else if (strncmp(arg, "-b", 2) == 0) {
-      if (strlen(arg) > 2) {
-        bitrate_filename = arg + 2;  // -bfile
-      } else if (arg_index + 1 < argc) {
-        bitrate_filename = argv[++arg_index];  // -b file
-      } else {
-        fprintf(stderr, "Option -b requires an argument\n");
-        exit_syntax();
-      }
-      arg_index++;
     } else {
-      fprintf(stderr, "Unknown option: %s\n", arg);
-      exit_syntax();
+      // This is a non-option argument (pipeline file, host, port)
+      non_option_count++;
     }
   }
   
-  // Set optind to the first non-option argument for compatibility
-  optind = arg_index;
-  fprintf(stderr, "DEBUG: Finished manual parsing, optind=%d\n", optind);
+  // Set optind to 1 for compatibility (we've already processed all arguments)
+  optind = 1;
+  fprintf(stderr, "DEBUG: Finished manual parsing, found %d non-option arguments\n", non_option_count);
 
-  fprintf(stderr, "DEBUG: Finished getopt loop, final optind=%d\n", optind);
-  fprintf(stderr, "DEBUG: optind=%d, argc=%d, FIXED_ARGS=%d\n", optind, argc, FIXED_ARGS);
-  fprintf(stderr, "DEBUG: argc - optind = %d\n", argc - optind);
+  fprintf(stderr, "DEBUG: Finished argument parsing\n");
+  fprintf(stderr, "DEBUG: non_option_count=%d, FIXED_ARGS=%d\n", non_option_count, FIXED_ARGS);
 
-  if (argc - optind != FIXED_ARGS) {
+  if (non_option_count != FIXED_ARGS) {
     fprintf(stderr, "DEBUG: Argument count mismatch, calling exit_syntax()\n");
     exit_syntax();
   }
 
+  // Find the non-option arguments (pipeline file, host, port)
+  char *pipeline_file = NULL;
+  char *host_arg = NULL; 
+  char *port_arg = NULL;
+  int found_args = 0;
+  
+  for (int i = 1; i < argc && found_args < 3; i++) {
+    if (argv[i][0] != '-') {
+      switch (found_args) {
+        case 0: pipeline_file = argv[i]; break;
+        case 1: host_arg = argv[i]; break;
+        case 2: port_arg = argv[i]; break;
+      }
+      found_args++;
+    } else {
+      // Skip option arguments
+      if (strncmp(argv[i], "-d", 2) == 0 || strncmp(argv[i], "-s", 2) == 0 || 
+          strncmp(argv[i], "-l", 2) == 0 || strncmp(argv[i], "-b", 2) == 0) {
+        if (strlen(argv[i]) == 2 && i + 1 < argc) {
+          i++; // Skip the argument value
+        }
+      }
+    }
+  }
 
   // Read the pipeline file
-  int pipeline_fd = open(argv[optind], O_RDONLY);
+  int pipeline_fd = open(pipeline_file, O_RDONLY);
   if (pipeline_fd < 0) {
-    fprintf(stderr, "Failed to open the pipeline file %s: ", argv[optind]);
+    fprintf(stderr, "Failed to open the pipeline file %s: ", pipeline_file);
     perror("");
     exit(EXIT_FAILURE);
   }
@@ -774,8 +799,8 @@ int main(int argc, char** argv) {
   GstElement *srt_app_sink = gst_bin_get_by_name(GST_BIN(gst_pipeline), "appsink");
   if (GST_IS_ELEMENT(srt_app_sink)) {
     gst_app_sink_set_callbacks (GST_APP_SINK(srt_app_sink), &callbacks, NULL, NULL);
-    srt_host = argv[optind+1];
-    srt_port = argv[optind+2];
+    srt_host = host_arg;
+    srt_port = port_arg;
 
     srt_startup();
   }
