@@ -6,7 +6,6 @@ queue !
 decodebin !
 videoconvert !
 identity name=v_delay signal-handoffs=TRUE !
-x264enc speed-preset=ultrafast tune=zerolatency bitrate=1000 name=venc_kbps !
-h264parse !
-mpegtsmux name=mux !
+av1enc cpu-used=8 end-usage=cbr target-bitrate=1000 name=venc_kbps !
+webmmux name=mux !
 appsink name=appsink
