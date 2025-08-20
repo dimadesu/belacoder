@@ -580,7 +580,6 @@ void cb_sigalarm(int signum) {
 
 #define FIXED_ARGS 3
 int main(int argc, char** argv) {
-  int opt;
   char *srt_host = NULL;
   char *srt_port = NULL;
   char *stream_id = NULL;
@@ -597,40 +596,82 @@ int main(int argc, char** argv) {
   optopt = 0;
 
   fprintf(stderr, "DEBUG: Starting getopt loop...\n");
-  while ((opt = getopt(argc, argv, "d:b:s:l:rv")) != -1) {
-    fprintf(stderr, "DEBUG: got option '%c' (optind=%d)\n", opt, optind);
-    switch (opt) {
-      case 'b':
-        bitrate_filename = optarg;
-        break;
-      case 'd':
-        av_delay = strtol(optarg, NULL, 10);
-        if (av_delay < -MAX_AV_DELAY || av_delay > MAX_AV_DELAY) {
-          fprintf(stderr, "Maximum sound delay +/- %d\n\n", MAX_AV_DELAY);
-          exit_syntax();
-        }
-        break;
-      case 's':
-        stream_id = optarg;
-        break;
-      case 'l':
-        srt_latency = strtol(optarg, NULL, 10);
-        if (srt_latency < MIN_SRT_LATENCY || srt_latency > MAX_SRT_LATENCY) {
-          fprintf(stderr, "The SRT latency must be between %d and %d ms\n\n",
-                  MIN_SRT_LATENCY, MAX_SRT_LATENCY);
-          exit_syntax();
-        }
-        break;
-      case 'r':
-        srt_pkt_size = REDUCED_SRT_PKT_SIZE;
-        break;
-      case 'v':
-        printf(VERSION "\n");
-        exit(EXIT_SUCCESS);
-      default:
+  
+  // Manual argument parsing for Termux compatibility
+  int arg_index = 1;
+  while (arg_index < argc && argv[arg_index][0] == '-') {
+    char *arg = argv[arg_index];
+    fprintf(stderr, "DEBUG: Processing argument: %s\n", arg);
+    
+    if (strcmp(arg, "-r") == 0) {
+      fprintf(stderr, "DEBUG: Found -r option\n");
+      srt_pkt_size = REDUCED_SRT_PKT_SIZE;
+      arg_index++;
+    } else if (strcmp(arg, "-v") == 0) {
+      printf(VERSION "\n");
+      exit(EXIT_SUCCESS);
+    } else if (strncmp(arg, "-d", 2) == 0) {
+      char *delay_str = NULL;
+      if (strlen(arg) > 2) {
+        delay_str = arg + 2;  // -d500
+      } else if (arg_index + 1 < argc) {
+        delay_str = argv[++arg_index];  // -d 500
+      } else {
+        fprintf(stderr, "Option -d requires an argument\n");
         exit_syntax();
+      }
+      av_delay = strtol(delay_str, NULL, 10);
+      if (av_delay < -MAX_AV_DELAY || av_delay > MAX_AV_DELAY) {
+        fprintf(stderr, "Maximum sound delay +/- %d\n\n", MAX_AV_DELAY);
+        exit_syntax();
+      }
+      arg_index++;
+    } else if (strncmp(arg, "-s", 2) == 0) {
+      if (strlen(arg) > 2) {
+        stream_id = arg + 2;  // -sstream
+      } else if (arg_index + 1 < argc) {
+        stream_id = argv[++arg_index];  // -s stream
+      } else {
+        fprintf(stderr, "Option -s requires an argument\n");
+        exit_syntax();
+      }
+      arg_index++;
+    } else if (strncmp(arg, "-l", 2) == 0) {
+      char *latency_str = NULL;
+      if (strlen(arg) > 2) {
+        latency_str = arg + 2;  // -l2000
+      } else if (arg_index + 1 < argc) {
+        latency_str = argv[++arg_index];  // -l 2000
+      } else {
+        fprintf(stderr, "Option -l requires an argument\n");
+        exit_syntax();
+      }
+      srt_latency = strtol(latency_str, NULL, 10);
+      if (srt_latency < MIN_SRT_LATENCY || srt_latency > MAX_SRT_LATENCY) {
+        fprintf(stderr, "The SRT latency must be between %d and %d ms\n\n",
+                MIN_SRT_LATENCY, MAX_SRT_LATENCY);
+        exit_syntax();
+      }
+      arg_index++;
+    } else if (strncmp(arg, "-b", 2) == 0) {
+      if (strlen(arg) > 2) {
+        bitrate_filename = arg + 2;  // -bfile
+      } else if (arg_index + 1 < argc) {
+        bitrate_filename = argv[++arg_index];  // -b file
+      } else {
+        fprintf(stderr, "Option -b requires an argument\n");
+        exit_syntax();
+      }
+      arg_index++;
+    } else {
+      fprintf(stderr, "Unknown option: %s\n", arg);
+      exit_syntax();
     }
   }
+  
+  // Set optind to the first non-option argument for compatibility
+  optind = arg_index;
+  fprintf(stderr, "DEBUG: Finished manual parsing, optind=%d\n", optind);
 
   fprintf(stderr, "DEBUG: Finished getopt loop, final optind=%d\n", optind);
   fprintf(stderr, "DEBUG: optind=%d, argc=%d, FIXED_ARGS=%d\n", optind, argc, FIXED_ARGS);
