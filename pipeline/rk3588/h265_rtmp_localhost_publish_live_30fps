@@ -1,4 +1,4 @@
-rtmpsrc location=rtmp://127.0.0.1:1935/mystream !
+rtmpsrc location=rtmp://127.0.0.1:1935//mystream !
 flvdemux name=demux
 
 demux.video !
