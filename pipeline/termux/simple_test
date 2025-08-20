@@ -1,0 +1,15 @@
+videotestsrc pattern=0 is-live=true !
+video/x-raw,width=320,height=240,framerate=15/1 !
+videoconvert !
+identity name=v_delay signal-handoffs=TRUE !
+x264enc bitrate=500 speed-preset=ultrafast tune=zerolatency name=venc_kbps !
+mpegtsmux name=mux !
+appsink name=appsink
+
+audiotestsrc is-live=true !
+audio/x-raw,rate=22050,channels=1 !
+audioconvert !
+identity name=a_delay signal-handoffs=TRUE !
+lamemp3enc bitrate=64 !
+mpegaudioparse !
+mux.
