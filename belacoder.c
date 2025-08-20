@@ -20,6 +20,10 @@
 #include <assert.h>
 #include <signal.h>
 #include <sys/mman.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include <gst/gst.h>
 #include <gst/gstinfo.h>
@@ -28,6 +32,8 @@
 
 #include <srt.h>
 #include <srt/access_control.h>
+
+#define VERSION "1.0.0-termux"
 
 #define SRT_MAX_OHEAD 20     // maximum SRT transmission overhead (when using appsink)
 #define SRT_ACK_TIMEOUT 6000 // maximum interval between received ACKs before the connection is TOed
@@ -579,7 +585,13 @@ int main(int argc, char** argv) {
   char *stream_id = NULL;
   srt_latency = DEF_SRT_LATENCY;
 
+  fprintf(stderr, "DEBUG: argc=%d, parsing arguments...\n", argc);
+  for (int i = 0; i < argc; i++) {
+    fprintf(stderr, "DEBUG: argv[%d]='%s'\n", i, argv[i]);
+  }
+
   while ((opt = getopt(argc, argv, "d:b:s:l:rv")) != -1) {
+    fprintf(stderr, "DEBUG: got option '%c'\n", opt);
     switch (opt) {
       case 'b':
         bitrate_filename = optarg;
@@ -613,7 +625,11 @@ int main(int argc, char** argv) {
     }
   }
 
+  fprintf(stderr, "DEBUG: optind=%d, argc=%d, FIXED_ARGS=%d\n", optind, argc, FIXED_ARGS);
+  fprintf(stderr, "DEBUG: argc - optind = %d\n", argc - optind);
+
   if (argc - optind != FIXED_ARGS) {
+    fprintf(stderr, "DEBUG: Argument count mismatch, calling exit_syntax()\n");
     exit_syntax();
   }
 
